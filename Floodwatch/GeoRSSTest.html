@@ -1,0 +1,209 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="initial-scale=1, maximum-scale=1,user-scalable=no">
+    <title></title>
+    <script src="http://ajax.aspnetcdn.com/ajax/jQuery/jquery-2.2.0.js"></script>
+    <link rel="stylesheet" href="https://js.arcgis.com/3.15/dijit/themes/tundra/tundra.css">
+    <link rel="stylesheet" href="https://js.arcgis.com/3.15/esri/css/esri.css">
+    <style>
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #map {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+        }
+
+        #meta {
+            position: absolute;
+            left: 20px;
+            bottom: 20px;
+            width: 20em;
+            height: 5em;
+            z-index: 40;
+            background: #fff;
+            color: #777;
+            padding: 5px;
+            border: 2px solid #666;
+            -webkit-border-radius: 5px;
+            -moz-border-radius: 5px;
+            border-radius: 5px;
+            font-family: arial;
+            font-size: 0.9em;
+        }
+
+            #meta h3 {
+                color: #666;
+                font-size: 1.1em;
+                padding: 0px;
+                margin: 0px;
+                display: inline-block;
+            }
+
+        #loading {
+            float: right;
+        }
+    </style>
+
+    <script src="https://js.arcgis.com/3.15/"></script>
+    <script>
+  var map;
+  require([
+      "esri/basemaps",
+    "esri/map", "esri/layers/GeoRSSLayer", "esri/InfoTemplate", "esri/config", "esri/SpatialReference", "esri/layers/ArcGISTiledMapServiceLayer", "esri/graphic",
+    "esri/symbols/SimpleFillSymbol", "esri/symbols/SimpleLineSymbol", "esri/symbols/SimpleMarkerSymbol","esri/geometry/Point",
+    "dojo/parser", "dojo/_base/array", "dojo/dom-style",
+    "dijit/layout/BorderContainer", "dijit/layout/ContentPane", "dojo/domReady!"
+  ], function (
+      esriBasemaps,
+    Map, GeoRSSLayer, InfoTemplate, esriConfig, SpatialReference, ArcGISTiledMapServiceLayer, ESRIGraphic,
+     SimpleFillSymbol, SimpleLineSymbol, SimpleMarkerSymbol,Point,
+    parser, arrayUtils, domStyle
+  ) {
+
+      var sr = new SpatialReference({ "wkid": 2193 });
+      var srLongLat = new SpatialReference({ "wkid": 4326 });
+
+      var basemap0 = new ArcGISTiledMapServiceLayer("http://maps.marlborough.govt.nz/arcgis/rest/services/Cache/Basemap/MapServer", {
+          visible: true,
+          spatialReference: sr
+  });
+      var basemap1 = new ArcGISTiledMapServiceLayer("http://maps.marlborough.govt.nz/arcgis/rest/services/Cache/LowResolutionAerialPhotos/MapServer", {
+          opacity: 0.75,
+          visible: true
+      });
+      $.get("http://hydro.marlborough.govt.nz/rss/FloodWatch/Flow/1/Feed.rss?ID=42387.7130269676", function (data) {
+          console.log(data);
+          var rssXML = $(data);
+          console.log(rssXML.find('item'));
+          window.rssXml = rssXML;
+
+          arrayUtils.forEach(rssXML.find('item'), function (i) {
+              //i.geometry.x = 1648262;//i.geometry.x * (291590422.33687764 / 5427731);
+              //i.geometry.y = 5427731; //1648262;
+              var pt = $(i).find('gml\\:point');
+
+              var x = $(i).find('[srsName="EPSG:2193"]');
+              var ptItem = x.children().text().split(' ');
+              var x = ptItem[0];
+              var y = ptItem[1];
+
+
+              //i.geometry.spatialReference = srLongLat;
+              //var geom = i.geometry;
+              var point = new Point(x, y, sr);
+              //var point = new Point(173, -41);
+              var graphic = new ESRIGraphic(point, crossSymbol);
+              map.graphics.add(graphic);
+
+              //291590422.33687764 => 5427731 
+              //10000000 => 1648262
+          });
+
+      });
+
+    map = new esri.Map("map",{
+        //basemap: "",
+        //spatialReference: sr,
+        //center: [1679000, 5402000],
+      zoom: 7
+      
+    });
+      map.addLayers([basemap0]);
+
+    //esriBasemaps.overview = {
+    //    baseMapLayers: [{ url: "http://maps.marlborough.govt.nz/arcgis/rest/services/Cache/Basemap/MapServer" }
+    //    ],
+    //    //thumbnailUrl: "http://servername.fqdn.suffix/images/thumbnail_2014-11-25_61051.png",
+    //    title: "Overview"
+    //};
+
+      var crossSymbol = new SimpleMarkerSymbol(
+{
+    "color": [255, 0, 0, 255], "size": 14, "angle": 0, "xoffset": 2, "yoffset": -2, "type": "esriSMS", "style": "esriSMSCross",
+    "outline": { "color": [255, 0, 0, 255], "width": 1, "type": "esriSLS", "style": "esriSLSSolid" }
+});
+
+ map.spatialReference = sr;
+    // create layout dijits
+    parser.parse();
+    //esriConfig.defaults.geometryService = "http://maps.marlborough.govt.nz/arcgis/rest/services/Utilities/Geometry/GeometryServer";
+   var georssUrl = 'http://hydro.marlborough.govt.nz/rss/FloodWatch/Flow/1/Feed.rss?ID=42387.7130269676';
+    //var georssUrl = "https://dl.dropboxusercontent.com/u/2654618/data-mixed.xml";
+    // other examples of GeoRSS feeds:
+    // var georssUrl = "http://geocommons.com/overlays/188692.atom"; // U.S. Breweries in 2009 http://geocommons.com/overlays/188692
+    // var georssUrl = "http://geocommons.com/overlays/116926.atom"; // S.F. and East Bay Breweries http://geocommons.com/overlays/116926
+   //var georss = new GeoRSSLayer(georssUrl, { outSpatialReference: sr });
+
+
+   var georss = new GeoRSSLayer(georssUrl
+       ,
+       {
+           outSpatialReference: sr,
+           spatialReference: sr
+       }
+       );
+   window.georss = georss;
+      //basemap0.spatialReference = sr;
+   //map.addLayer(basemap0);
+    //georss.outSpatialReference = sr;
+    georss.on("load", function() {
+      domStyle.set("loading", "display", "none");
+      // create an info template
+      var template = new InfoTemplate("${title}", "${title}");
+      // set the info template for the feature layers that make up the GeoRSS layer
+      // the GeoRSS layer contains one feature layer for each geometry type
+      var layers = georss.getFeatureLayers();
+        map.graphics.spatialReference = sr;
+        arrayUtils.forEach(georss.items, function(i) {
+            //i.geometry.x = 1648262;//i.geometry.x * (291590422.33687764 / 5427731);
+            //i.geometry.y = 5427731; //1648262;
+            i.geometry.spatialReference = srLongLat;
+            var geom = i.geometry;
+            var point = new Point(5427731, 1648262, sr);
+            //var point = new Point(173, -41);
+            var graphic = new ESRIGraphic(geom, crossSymbol);
+            map.graphics.add(graphic);
+            
+            //291590422.33687764 => 5427731 
+            //10000000 => 1648262
+        });
+        map.centerAndZoom(new Point(1671716.911346706, 5405578.032554035, sr), 3);
+        map.addLayers([georss]);
+      arrayUtils.forEach(layers, function(l) {
+        l.setInfoTemplate(template);
+      });
+    });
+      
+    //map.addLayer(georss);
+    
+  });
+    </script>
+</head>
+
+<body class="tundra">
+    <div data-dojo-type="dijit/layout/BorderContainer"
+         data-dojo-props="design:'headline',gutters:false"
+         style="width: 100%; height: 100%; margin: 0;">
+        <div id="map"
+             data-dojo-type="dijit/layout/ContentPane"
+             data-dojo-props="region:'center'">
+            <div id="meta">
+                <span id="loading"><img src="https://dl.dropboxusercontent.com/u/2654618/loading_black.gif" /></span>
+                <h3>Display GeoRSS on a map</h3>
+                <br>
+                The map displays a simple GeoRSS file with points, lines and polygons.
+                <div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

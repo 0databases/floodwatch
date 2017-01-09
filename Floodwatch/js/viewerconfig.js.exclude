@@ -1,0 +1,158 @@
+﻿
+// @formatter:off
+            function returnXmlBasemap() {
+
+                if (window.XMLHttpRequest) {// code for IE7+, Firefox, Chrome, Opera, Safari
+                    xmlhttp = new XMLHttpRequest();
+                }
+                else {// code for IE6, IE5
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.open("GET", "viewerconfig.xml", false);
+                xmlhttp.send();
+                xmlDoc = xmlhttp.responseXML;
+
+                var xmls = convertXmlToStructure(xmlDoc);
+                var out = '';
+                var i;
+                var basemap = new Array;
+                basemap = xmls.Viewer[0].MapConfig[0].Basemap[0];
+
+                console.dir(basemap);
+
+                for (i = 0; i < basemap.TiledMapService.length; i++) {
+                    out += basemap.TiledMapService[i].Name + ' ' + basemap.TiledMapService[i].URL + '</br>';
+                }
+                //	debug write to log div
+                //document.getElementById('log').innerHTML += out;
+                console.log(out);
+                return basemap;
+            };
+
+            function returnXmlLayers() {
+
+                if (window.XMLHttpRequest) {// code for IE7+, Firefox, Chrome, Opera, Safari
+                    xmlhttp = new XMLHttpRequest();
+                }
+                else {// code for IE6, IE5
+                    xmlhttp = new ActiveXObject("Microsoft.XMLHTTP");
+                }
+                xmlhttp.open("GET", "viewerconfig.xml", false);
+                xmlhttp.send();
+                xmlDoc = xmlhttp.responseXML;
+
+                var xmls = convertXmlToStructure(xmlDoc);
+                var out = '';
+                var i;
+                var layers = new Array;
+                layers = xmls.Viewer[0].Layers;
+                
+                for (i = 0; i < layers[0].Layer.length; i++) {
+                    out += layers[0].Layer[i].Name + ' ' + layers[0].Layer[i].URL + '</br>';
+                }
+
+                console.log(out);
+                return layers
+            };
+            function convertXmlToStructure(x) {
+                //
+                //  Output function.
+                //
+                var o = {
+                    _text: ''
+                };
+
+                //
+                //  c = each child
+                //
+                var c = x.firstChild;
+
+                //
+                //  Loop through child nodes.
+                //
+                while (c) {
+
+                    //
+                    //  Add to _text property if it is a text.
+                    //
+                    if (c.nodeName == '#text') {
+                        o._text += c.nodeValue;
+
+                        //
+                        //  Else if it is a normal node.
+                        //
+                    } else if (c.nodeType == 1) {
+
+                        //
+                        //  Create property for each node name.
+                        //
+                        if (typeof o[c.nodeName] == 'undefined')
+                            o[c.nodeName] = [];
+                        o[c.nodeName][o[c.nodeName].length] = convertXmlToStructure(c);
+                    }
+
+                    //
+                    //  ...Next!
+                    //
+                    c = c.nextSibling;
+
+                }
+
+                //
+                //  Now, attributes!
+                //
+                var a = x.attributes;
+                var i = 0;
+                if (a) {
+                    for (var i = 0; i < a.length; i++) {
+                        o[a[i].name] = a[i].value;
+                    }
+                }
+
+                //
+                //  Clean the text
+                //
+                if (o._text.match(/^\s*$/))
+                    delete o._text;
+
+                //
+                //  Finished!
+                //
+                return o;
+            }
+
+//require(["XMLdocument","dojo/ready","dojo/domReady!"],
+//    function(xmldocument,ready){
+//        ready(function(){
+        
+            
+
+
+
+//            function loadLayers(XMLDocument) {
+//                //read XML layer names from viewerconfig.xml
+
+//                var profiles = xml.getElementsByTagName("Layers");
+//                var arr = [];
+//                for (var key in profiles) {
+//                    arr.push([]);
+//                    var nodes = profiles[key].childNodes;
+//                    for (var ele in nodes) {
+//                        if (nodes[ele]) {
+//                            arr[key].push(nodes[ele]);
+//                        }
+//                    }
+//                }
+//                console.log(arr);
+
+//                //var mp;
+//                //if (map.spatialReference.wkid = 2193) {
+//                //    mp = evt.mapPoint;
+//                //} else { mp = webMercatorUtils.webMercatorToGeographic(evt.mapPoint); };
+//                ////display mouse coordinates
+//                //dom.byId("coordinateinfo").innerHTML = mp.x.toFixed(2) + ", " + mp.y.toFixed(2);
+//            }
+
+//        });
+//    }        
+//);

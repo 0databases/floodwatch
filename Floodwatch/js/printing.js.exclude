@@ -1,0 +1,114 @@
+﻿
+function getMapLayers() {
+    var visible = [];
+
+    return visible;
+}
+
+
+//https://developers.arcgis.com/javascript/jssamples/layers_dynamic_reorder.html
+
+define('printing', ["dojo/_base/array", "dojo/query",
+    "esri/layers/DynamicLayerInfo", "esri/map"],
+    function (arrayUtils, query,
+        DynamicLayerInfo, map) {
+
+        var dynamicLayerInfos;
+
+        return {
+            getVisibleLayers: function () {
+                // get layer name nodes, build an array corresponding to new layer order
+                var layerOrder = [];
+                //query("#layerToggle .dojoDndItem label").forEach(function (n, idx) {
+                //    for (info in infos) {
+                //        var i = infos[info];
+                //        if (i.name === n.innerHTML) {
+                //            layerOrder[idx] = i.id;
+                //            // keep track of a layer's position in the layer list
+                //            i.position = idx;
+                //            break;
+                //        }
+                //    }
+                //});
+
+                // find the layer IDs for visible layer
+                var ids = arrayUtils.filter(layerOrder, function (l) {
+                    return infos[l].visible;
+                });
+                // get the dynamicLayerInfos for visible layers
+                //var visible = arrayUtils.map(ids, function (id) {
+                //    return dynamicLayerInfos[id];
+                //});
+                //return visible;
+            }
+        }
+        return {
+            getDynamicLayerInfos: function () {
+                var dynamicLayerInfo = new DynamicLayerInfo({
+                    "defaultVisibility": true,
+                    "id": 0,
+                    "maxScale": 1000000,
+                    "minScale": 0,
+                    "parentLayerId": -1
+                });
+            }
+    };
+
+});
+
+console.log("reading printing");
+// @formatter:off
+/* Step: Require the esri/map module and the dojo/domReady! plugin */
+require(["esri/map",
+    "esri/dijit/Print", "esri/tasks/PrintTask", "esri/tasks/PrintParameters", "esri/tasks/PrintTemplate",
+    "dojo/_base/array", "dojo/parser", "dojo/ready",
+    "dojo/domReady!"],
+    function (
+        map,
+        Print,
+        PrintTask, PrintParameters, PrintTemplate,
+        arrayUtils, parser, ready) {
+        // @formatter:on
+        // Wait until DOM is ready *and* all outstanding require() calls have been resolved
+        ready(function () {
+
+            // Parse DOM nodes decorated with the data-dojo-type attribute
+            parser.parse();
+
+            //function createPrint(map, printUrl) {
+            //    //Set up print stuff
+            //    var printTask = new PrintTask(printUrl);
+            //    var params = new PrintParameters();
+            //    var template = new PrintTemplate();
+
+            //    params.map = map;
+            //    params.outSpatialReference = map.spatialReference;
+            //    template.exportOptions = {
+            //        width: 595,
+            //        height: 842,
+            //        dpi: 96
+            //    };
+            //    template.format = "PDF";
+            //    template.layout = "A4 Landscape"; //MAP_ONLY
+            //    template.preserveScale = false;
+
+            //    params.template = template;
+
+            //    //dojo.connect(map, "onLoad", function() {//Fire the print task
+            //    //printTask.execute(params, printResult, printError);
+            //    setTimeout(function () { printTask.execute(params, printResult, printError); }, 2500);
+            //}
+
+            //function printResult(result) {
+            //    console.log(result.url)
+            //}
+            //function printError(result) {
+            //    console.log(result);
+            //}
+
+            //            exports.createPrint = createPrint; //public function
+            //            exports.printResult = printResult;
+        });
+    }
+);
+

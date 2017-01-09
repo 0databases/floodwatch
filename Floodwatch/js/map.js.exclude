@@ -1,0 +1,393 @@
+﻿var map;
+var propertyFL;
+var property_no;
+var layerList = new Array;
+var printer = null;
+
+// @formatter:off
+
+/* Step: Require the esri/map module and the dojo/domReady! plugin */
+require(["esri/urlUtils", "esri/map", "esri/Color", "esri/config",
+    "esri/dijit/HomeButton", "esri/dijit/Popup", "esri/dijit/PopupTemplate",
+    "esri/dijit/Print", "esri/tasks/PrintTask", "esri/tasks/PrintParameters", "esri/tasks/PrintTemplate",
+    "esri/dijit/Scalebar",
+    "esri/geometry/webMercatorUtils", "esri/graphic", "esri/graphicsUtils",
+    "esri/layers/ArcGISDynamicMapServiceLayer",
+    "esri/layers/ArcGISTiledMapServiceLayer", "esri/layers/FeatureLayer",
+    "esri/SpatialReference",
+    "esri/symbols/SimpleFillSymbol", "esri/symbols/SimpleLineSymbol",
+    "esri/tasks/query", "esri/tasks/QueryTask",
+    "dijit/layout/BorderContainer", "dijit/form/Button", "dijit/form/CheckBox", "dijit/layout/ContentPane",
+    "dojo/_base/array", "dojo/dom-construct", "dojo/dom", "dojo/on", "dojo/parser", "dojo/query", "dojo/ready",
+    "printing",
+    "dojo/domReady!"],
+    function (urlUtils, Map, Color, esriConfig, HomeButton,
+        Popup, PopupTemplate,
+        Print, PrintTask, PrintParameters, PrintTemplate,
+        Scalebar,
+        webMercatorUtils, Graphic, graphicsUtils,
+        ArcGISDynamicMapServiceLayer, ArcGISTiledMapServiceLayer, FeatureLayer,
+        SpatialReference,
+        SimpleFillSymbol, SimpleLineSymbol,
+        Query, QueryTask, BorderContainer, Button, CheckBox, ContentPane,
+        arrayUtils, domConstruct, dom, on, parser, query, ready,
+        printing
+        ) {
+        // @formatter:on
+        // Wait until DOM is ready *and* all outstanding require() calls have been resolved
+        ready(function () {
+
+            // Parse DOM nodes decorated with the data-dojo-type attribute
+            parser.parse();
+
+            //apply a selection symbol that determines the symbology for selected features
+            var sfs = new SimpleFillSymbol(
+              SimpleFillSymbol.STYLE_SOLID,
+              new SimpleLineSymbol(
+                SimpleLineSymbol.STYLE_SOLID,
+                new Color([111, 0, 255]),
+                2
+              ),
+              new Color([111, 0, 255, 0.15])
+            );
+
+            var popup = new Popup({
+                fillSymbol: sfs
+            }, domConstruct.create("div"));
+
+            /*
+             *  Step: Specify the proxy Url
+                refer to "Using the Proxy Page" for more information:  https://developers.arcgis.com/en/javascript/jshelp/ags_proxy.html
+            */
+            //esriConfig.defaults.io.proxyUrl = "/proxy";
+            //esriConfig.defaults.io.proxyUrl = "http://localhost/proxy/proxy.ashx";
+            //config.defaults.io.proxyUrl = "http://localhost/proxy/proxy.ashx";
+            //esriConfig.defaults.geometryService = new esri.tasks.GeometryService("http://s1-mdc.cloud.eaglegis.co.nz/arcgis/rest/services/Utilities/Geometry/GeometryServer");
+            //esriConfig.defaults.geometryService = new esri.tasks.GeometryService("http://tasks.arcgisonline.com/ArcGIS/rest/services/Geometry/GeometryServer");
+            map = new Map("map", {
+                infoWindow: popup,
+                //basemap: "streets",
+                //center: [1686000,5451000]
+                //center: [173.96, -41.51],
+                //zoom: 8
+                slider: true
+            });
+            /*	set spatial reference, extent and map content */
+            var sr = new SpatialReference({ "wkid": 2193 });
+            map.spatialReference = sr;
+
+            //  Load Basemap
+            basemap = returnXmlBasemap();
+            for (i = 0; i < basemap.TiledMapService.length; i++) {
+                basemap.TiledMapService[i].Name + ' ' + basemap.TiledMapService[i].URL + '</br>';
+                fl = new ArcGISTiledMapServiceLayer(basemap.TiledMapService[i].URL);
+                fl.id = basemap.TiledMapService[i].Name;
+                layerList.push(basemap.TiledMapService[i].Name);
+                map.addLayer(fl);
+            }
+
+            //var basemap = new ArcGISTiledMapServiceLayer("http://s1-mdc.cloud.eaglegis.co.nz/arcgis/rest/services/Cache/TopographicMaps/MapServer");
+            //map.addLayer(basemap);
+            //map.center = [1686000, 5404000];
+            //map.setLevel(6);
+            //layerList.push(basemap.Name);
+
+            /*	*/
+            //apply a popup template to the properties layer to format popup info, needs to be prior to the feature layer it it used with.
+            var popupTemplate = new PopupTemplate({
+                title: "Property Number in {property_no}",
+                fieldInfos: [
+                { fieldName: "property_no", visible: true, format: { "digitSeparator": false, places: 0 } },
+                { fieldName: "property_status", visible: true }
+                ],
+                showAttachments: true
+            });
+
+            /*	Add layers*/ //add the properties layer to the map as a feature layer in selection mode we'll use this layer to query and display the selected properties
+            propertyFL = new FeatureLayer("http://s1-mdc.cloud.eaglegis.co.nz/arcgis/rest/services/Data/ContextDataPublic/MapServer/5", {
+                outFields: ["*"],
+                infoTemplate: popupTemplate,
+                mode: FeatureLayer.MODE_SELECTION
+            });
+            propertyFL.setSelectionSymbol(sfs);
+
+            //propertyLine = new FeatureLayer("http://s1-mdc.cloud.eaglegis.co.nz/arcgis/rest/services/Data/ContextDataPublic/MapServer/6", {
+            //    outFields: ["*"],
+            //});
+            //propertyLine = new FeatureLayer("http://gisinternal/ArcGIS/rest/services/Dekho/ParcelAndProperty/MapServer/7", {
+            //    outFields: ["*"]
+            //});
+            //biosecurityFL = new ArcGISDynamicMapServiceLayer("http://gisinternal/ArcGIS/rest/services/Dekho/Biosecurity/MapServer/24", {
+            //    outFields: ["*"]
+            //});
+            //biosecurityPestPlants = new ArcGISDynamicMapServiceLayer("http://gisinternal/ArcGIS/rest/services/Dekho/Biosecurity/MapServer/2", {
+            //    outFields: ["*"]
+            //});
+
+            map.on("load", function () {
+                //after map loads, connect to listen to mouse move & drag events
+                map.on("mouse-move", showCoordinates);
+                map.on("mouse-drag", showCoordinates);
+                map.on("mouse-click", getMapWidthHeight);
+
+                loadLayers();
+
+            });
+
+            //  Load layers from xml configuration file
+            function loadLayers() {
+                var out = 'Layers:';
+                var layers = new Array;
+                var layersList = new Array;
+
+                layers = returnXmlLayers();
+                for (i = 0; i < layers[0].Layer.length; i++) {
+                    out += layers[0].Layer[i].Name + ' ' + layers[0].Layer[i].URL + '</br>';
+                    fl = new FeatureLayer(layers[0].Layer[i].URL);
+                    fl.id = layers[0].Layer[i].Name;
+                    if (layers[0].Layer[i].Mode != "") { fl.mode = layers[0].Layer[i].Mode }
+                    if (layers[0].Layer[i].outFields != "") { fl.outFields = layers[0].Layer[i].outFields }
+                    layersList.push(fl);
+                    layerList.push(layers[0].Layer[i].Name);
+                }
+
+                console.log(out)
+                map.addLayers(layersList);
+
+                // create a check box for each map layer
+                arrayUtils.forEach(layerList, function (id) {
+                    new CheckBox({
+                        id: "cb_" + id,
+                        name: "cb_" + id,
+                        checked: true,
+                        onChange: function (bool) {
+                            bool ?
+                              map.getLayer(this.id.split("_")[1]).show() :
+                              map.getLayer(this.id.split("_")[1]).hide();
+                        }
+                    }, domConstruct.create("input", {
+                        id: "lyr_" + id
+                    })).placeAt(dom.byId("layerToggle"));
+
+                    // create a label for the check box
+                    var label = domConstruct.create('label', {
+                        "for": "cb_" + id,
+                        "innerHTML": id
+                    });
+                    domConstruct.place(label, dom.byId("layerToggle"));
+                    domConstruct.place(domConstruct.create("br"), dom.byId("layerToggle"));
+                });
+            };
+
+            //  ------------------------------------------------------------
+            // print dijit
+            //http://sampleserver6.arcgisonline.com/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task
+            //http://gisdev:6080/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task
+            printer = new Print({
+                map: map,
+                url: "http://gisdev:6080/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task"
+            }, dom.byId("printButton"));
+            printer.startup();
+
+            //function printMap()
+            //{
+                
+            //}
+            document.getElementById("printTaskButton").onclick = function () {
+                //printMap()
+                createPrint(map, "http://gisdev:6080/arcgis/rest/services/Utilities/PrintingTools/GPServer/Export%20Web%20Map%20Task");
+            };
+            
+            function createPrint(map, printUrl) {
+                //Set up print stuff
+                var printTask = new PrintTask(printUrl);
+                var params = new PrintParameters();
+                var template = new PrintTemplate();
+
+                params.map = map;
+                params.outSpatialReference = map.spatialReference;
+                template.exportOptions = {
+                    width: 595,
+                    height: 842,
+                    dpi: 96
+                };
+                template.format = "PDF";
+                template.layout = "A4 Landscape"; //MAP_ONLY
+                template.preserveScale = false;
+
+                params.template = template;
+
+                //dojo.connect(map, "onLoad", function() {//Fire the print task
+                //printTask.execute(params, printResult, printError);
+                setTimeout(function () { printTask.execute(params, printResult, printError); }, 2500);
+            }
+
+            function printResult(result) {
+                console.log(result.url)
+                document.getElementById('printTaskResult').innerHTML += "Print Link";
+                document.getElementById('printTaskResultLink').href += result.url;
+            }
+            function printError(result) {
+                console.log(result);
+            }
+
+            document.getElementById("layerListButton").onclick = function () {
+                //printMap()
+                var lList = new Array();
+                lList = printing.getVisibleLayers();
+
+                var dynamicLayerInfos;
+
+                var ids = [0];
+                var visible = arrayUtils.map(ids, function (id) {
+                    return dynamicLayerInfos[id];
+                });
+
+                if (lList.length > 0) {
+                    document.getElementById('layerListResult').innerHTML += lList.toString();
+                }
+                else { document.getElementById('layerListResult').innerHTML += "no records" }
+                
+            };
+            //  ------------------------------------------------------------
+            // find the divs for buttons
+            query(".drawing").forEach(function (btn) {
+                var button = new Button({
+                    label: btn.innerHTML,
+                    onClick: function () {
+                        activateTool(this.id);
+                    }
+                }, btn);
+            });
+
+            function showCoordinates(evt) {
+                //the map is in web mercator but display coordinates in geographic (lat, long)
+                var mp;
+                //mp = webMercatorUtils.lngLatToXY(evt.mapPoint);
+                if (map.spatialReference.wkid = 2193) {
+                    mp = evt.mapPoint;
+                } else { mp = webMercatorUtils.webMercatorToGeographic(evt.mapPoint); };
+                //display mouse coordinates
+                dom.byId("coordinateinfo").innerHTML = mp.x.toFixed(2) + ", " + mp.y.toFixed(2);
+            }
+
+            var newURL = window.location.protocol + "//" + window.location.host + "/" + window.location.pathname;
+            console.log(newURL);
+
+            var url = urlUtils.urlToObject(window.location.href);
+
+            if (url.query) {
+                var myquery = url.query;
+                console.log(myquery);
+                if (myquery.property_no) {
+                    console.log(myquery.property_no);
+                };
+            };
+
+            var home = new HomeButton({
+                map: map
+            }, "HomeButton");
+            home.startup();
+
+            var scalebar = new Scalebar({
+                map: map,
+                // "dual" displays both miles and kilmometers
+                // "english" is the default, which displays miles
+                // use "metric" for kilometers
+                scalebarUnit: "metric"
+            });
+
+            function getMapWidthHeight() {
+                alert("Width = " + map.width + "; Height = " + map.height);
+            };
+
+            //when users click on the map select the property using the map point and update the url parameter
+            map.on("click", function (e) {
+                var query = new Query();
+                query.geometry = e.mapPoint;
+                var deferred = propertyFL.selectFeatures(query, FeatureLayer.SELECTION_NEW, function (selection) {
+                    //update the url param if a property was located
+                    if (selection.length > 0) {
+                        var property_no = selection[0].attributes["property_no"];
+                        //Refresh the URL with the currently selected property
+                        if (typeof history.pushState !== "undefined") {
+                            window.history.pushState(null, null, "?property_no=" + selection[0].attributes.property_no);
+                        }
+                    }
+                });
+                map.infoWindow.setFeatures([deferred]);
+                map.infoWindow.setContent(property_no);
+                map.infoWindow.show(e.mapPoint);
+            });
+
+            map.on("layers-add-result", function (result) {
+                // Add a link into the InfoWindow Actions panel
+                var emailLink = domConstruct.create("a", {
+                    "class": "action",
+                    "innerHTML": "Email Map",
+                    "href": "javascript:void(0);"
+                }, query(".actionList", map.infoWindow.domNode)[0]);
+
+                // Register a function to be called when the user clicks on the above link
+                on(emailLink, "click", function (evt) {
+                    var feature = map.infoWindow.getSelectedFeature();
+                    var url = window.location;
+                    var emailLink = "mailto:?subject=Property Map of :" +
+                      feature.attributes.property_no + "&body=Check out this map: %0D%0A " +
+                      window.location;
+                    window.location.href = emailLink;
+                });
+
+                //When users navigate through the history using the browser back/forward buttons select appropriate property
+                //https://developer.mozilla.org/en/DOM/Manipulating_the_browser_history
+                window.onpopstate = function (event) {
+                    var property_no = getPropertyFromUrl(document.location.href);
+                    if (property_no) {
+                        selectProperty(property_no);
+                    } else {
+                        propertyFL.clearSelection();
+                        map.infoWindow.hide();
+                    }
+                };
+
+                //if a property_no is specified in url param select that feature
+                var property_no = getPropertyFromUrl(document.location.href);
+                selectProperty(property_no);
+            });
+
+            //map.addLayers([propertyFL, propertyLine]);
+
+            //extract the property id from the url
+            function getPropertyFromUrl(url) {
+                var urlObject = urlUtils.urlToObject(url);
+                if (urlObject.query && urlObject.query.property_no) {
+                    return urlObject.query.property_no;
+                } else {
+                    return null;
+                }
+            }
+
+            //select property from the feature layer by creating a query to look for the input property_no
+            function selectProperty(property_no) {
+                if (property_no) {
+                    var query = new Query();
+                    query.where = "property_no = '" + parseInt(property_no) + "'";
+                    var deferred = propertyFL.selectFeatures(query, FeatureLayer.SELECTION_NEW, function (selection) {
+                        var center = graphicsUtils.graphicsExtent(selection).getCenter();
+                        var extHandler = map.on("extent-change", function () {
+                            extHandler.remove();
+                            //zoom to the center then display the popup
+                            map.infoWindow.setFeatures(selection);
+                            map.infoWindow.show(center);
+                        });
+                        map.centerAt(center);
+
+                        //	zoom to features
+                        var extent = esri.graphicsExtent(selection);
+                        map.setExtent(extent, true);
+                    });
+                }
+            }
+
+        });
+    });
